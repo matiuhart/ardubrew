@@ -33,6 +33,9 @@ LiquidCrystal lcd(12,11,5,4,3,2);
 
 // Instacio OneWire para todos los dispositivos en el bus
 OneWire OneWire(ONE_WIRE_BUS);
+//OneWire ds(ONE_WIRE_BUS); habilitar para busquda de sensores
+
+
 
 // Paso como referencia el bus a la lib Dallas
 DallasTemperature sensors(&OneWire);
@@ -62,9 +65,9 @@ int temperatura = 0;
 
 
 //Variables para almacenado de datos entrantes a serie
-char comandoSerie[10]; // Creo array para almacenar comandos a procesar
-char caracterSerieEntrante; // Creo variable para almacenar comando entrante via serie
-byte indexComandoSerie = 0; // indice para recorrer array
+//char comandoSerie[10]; // Creo array para almacenar comandos a procesar
+//char caracterSerieEntrante; // Creo variable para almacenar comando entrante via serie
+//byte indexComandoSerie = 0; // indice para recorrer array
 
 String inputString = "";         // Variable que almacena cada cadena entrante al puerto serie
 char inputChar []= {};
@@ -100,7 +103,7 @@ unsigned long intervaloLCDScrollPrev = 0;
 
 int getTemp (int numeroFermentador);
 int setearTemperatura (int numeroFermentador, int temperatura);
-void imprimirTemperatura(DeviceAddress deviceAddress);
+//void imprimirTemperatura(DeviceAddress deviceAddress);
 long recuperarTemperatura(DeviceAddress deviceAddress);
 
 
@@ -114,6 +117,9 @@ long recuperarTemperatura(DeviceAddress deviceAddress);
 void setup(void){
   Serial.begin(9600);
   Serial.setTimeout(2000);
+
+  // Buscar dispositivos 1-wire
+  //discoverOneWireDevices();
 
   // Inicializao LCD
   lcd.begin(16,2);
@@ -148,97 +154,33 @@ void loop(void){
       sensoresDeTemperatura[1] = recuperarTemperatura(sensor1);
       sensoresDeTemperatura[2] = recuperarTemperatura(sensor2);
   }
-/*
-/////////////////////////////////////////////////////////////Leo comandos entrantes a serial, no se lee a menos que haya datos en el buffer
-  while(Serial.available() > 0){
-      // Uno menos que el tamaño del array
-      if(indexComandoSerie < 9){
-          caracterSerieEntrante = Serial.read(); // Se lee el caracter entrante al puerto serie
-          comandoSerie[indexComandoSerie] = caracterSerieEntrante; // Se almacena en el array
-          indexComandoSerie++; // Se incrementa el nro de indexComandoSerie para almacenar el proximo
-          comandoSerie[indexComandoSerie] = '\0'; // Termina la entrada de la cadena con un NULL
-          delay(10);
-      }
-  }
 
-////////////////////////////////////////////////////////////Empiezo a analizar comandos entrantes para realizar acciones
-  //Seteo de temperatura para fermentador con 's' y consulta con 'g'
-  if (comandoSerie[0] == 's'){
-      String tempStr = "";
-      tempStr += comandoSerie[2];
-      tempStr += comandoSerie[3];
-      fermentadorNumero = comandoSerie[1] - '0';
-      temperatura = tempStr.toInt();
-      setearTemperatura(fermentadorNumero,temperatura);
-      indexComandoSerie=0;
-      memset(comandoSerie,0,sizeof(comandoSerie)); //Borro todos los datos del array
-  }
-  else if (comandoSerie[0] == 'g'){
-      fermentadorNumero= comandoSerie[1] - '0'; //convierto char to int
-      temperatura=getTemp(fermentadorNumero);
-      Serial.println(temperatura);
-      indexComandoSerie=0;
-      memset(comandoSerie,0,sizeof(comandoSerie)); //Borro todos los datos del array
-  }
-  else if (comandoSerie[0] == 'f') {
-      fermentadorNumero= comandoSerie[1] - '0';
-      Serial.println(getSetTemp(fermentadorNumero));
-
-      indexComandoSerie=0;
-      memset(comandoSerie,0,sizeof(comandoSerie)); //Borro todos los datos del array
-  }
-      //memset(comandoSerie,0,sizeof(comandoSerie));
-*/
 ///////////////////////////////////////////////////////////////////////////////////
-// Modifico array dinamicamente y convierto string to char
-    char inputChar[inputString.length()+1];
-    inputString.toCharArray(inputChar,inputString.length()+1);
+  
+  // Modifico array dinamicamente y convierto string to char
+  char inputChar[inputString.length()+1];
+  inputString.toCharArray(inputChar,inputString.length()+1);
 
   
   // Llamo a la funcion de evento serie para verificar entrada de datos
   serialEvent();
 
+  
   // Imprime la cadena cuando llega una nueva linea:
   if (stringComplete) {
 
-  Serial.println(inputString);
+    Serial.println(inputString);
 
-  //imprimirChars();
+    // Parseo de comandos entrantes
+    parsearComando();
 
-  char modo = inputString[0];
-  char fermentadorNumero = inputString[1] - '0';;
-  String tempStr = "";
-
-  switch (modo) {
-      case 's':
-          tempStr += inputString[2];
-          tempStr += inputString[3];
-          temperatura = tempStr.toInt();
-          Serial.println("Modo seteo activado");
-          setearTemperatura(fermentadorNumero,temperatura);
-          
-      
-        break;
-      case 'g':
-          Serial.println("Modo consulta activado");
-          temperatura=getTemp(fermentadorNumero);
-          Serial.println(temperatura);
-      
-        break;
-      case 'f':
-          fermentadorNumero= comandoSerie[1] - '0';
-          Serial.println(getSetTemp(fermentadorNumero));
-        break;
-      default:
-        Serial.println("Ingrese un comando valido");
-  }
-
-  // Limpio la cadena para esperar nuevos datos entrantes
+  
+    // Limpio la cadena para esperar nuevos datos entrantes
     memset(inputChar, 0, sizeof(inputChar));
     inputString = "";
     stringComplete = false;
 
-}
+  }
 
 
 
@@ -322,6 +264,35 @@ void serialEvent() {
   }
 }
 
+void parsearComando(){
+  char modo = inputString[0];
+  char fermentadorNumero = inputString[1] - '0';;
+  String tempStr = "";
+
+  switch (modo) {
+      case 's':
+          tempStr += inputString[2];
+          tempStr += inputString[3];
+          temperatura = tempStr.toInt();
+          Serial.println("Modo seteo activado");
+          setearTemperatura(fermentadorNumero,temperatura);
+          
+      
+        break;
+      case 'g':
+          Serial.println("Modo consulta activado");
+          temperatura=getTemp(fermentadorNumero);
+          Serial.println(temperatura);
+      
+        break;
+      case 'f':
+          Serial.println(getSetTemp(fermentadorNumero));
+        break;
+      default:
+        Serial.println("Ingrese un comando valido");
+  }
+}
+
 void imprimirChars(){
     // Imprimo los caracteres dentro del array
     for (int i=0;i < inputString.length();i++) {
@@ -330,11 +301,6 @@ void imprimirChars(){
         
     }
 }
-
-
-
-
-
 
 //Funcion para recuperar temperatura de fermentador en variable de ultima consulta
 int getTemp (int numeroFermentador){
@@ -366,7 +332,7 @@ int setearTemperatura (int numeroFermentador, int temperatura){
 void imprimirTemperatura(DeviceAddress deviceAddress){
     float tempC = sensors.getTempC(deviceAddress);
     Serial.println(tempC);
-  }
+}
 
 long imprimirTemperaturaLcd(DeviceAddress deviceAddress){
   float tempC = sensors.getTempC(deviceAddress);
@@ -378,8 +344,36 @@ long imprimirTemperaturaLcd(DeviceAddress deviceAddress){
 long recuperarTemperatura(DeviceAddress deviceAddress){
     float tempC = sensors.getTempC(deviceAddress);
     return tempC;
+}
+
+
+void discoverOneWireDevices(void) {
+  byte i;
+  byte addr[8];
+  //byte present = 0;
+  //byte data[12];
+  
+  
+  Serial.print("Buscando dispositivos 1-Wire...\n\r");
+  while(ds.search(addr)) {
+    Serial.print("\n\rSe encontro un dispositivo \'1-Wire\' device with address:\n\r");
+    for( i = 0; i < 8; i++) {
+      Serial.print("0x");
+      if (addr[i] < 16) {
+        Serial.print('0');
+      }
+      Serial.print(addr[i], HEX);
+      if (i < 7) {
+        Serial.print(", ");
+      }
+    }
+    if ( OneWire::crc8( addr, 7) != addr[7]) {
+        Serial.print("CRC no valido!\n");
+        return;
+    }
   }
-
-
-
+  Serial.print("\n\r\n\rEso es todo.\r\n");
+  ds.reset_search();
+  return;
+}
 
