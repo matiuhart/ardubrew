@@ -22,6 +22,10 @@ g1 ("g" hace un get de la temperatura a sensoresDeTemperatura1, el cual estaria 
 #include <DallasTemperature.h>
 #include <LiquidCrystal.h>
 
+
+//Defino pin para busqueda de dispositivos OneWire
+OneWire  ds(9);  
+
 // Defino pines para LCD
 LiquidCrystal lcd(12,11,5,4,3,2);
 
@@ -33,7 +37,6 @@ LiquidCrystal lcd(12,11,5,4,3,2);
 
 // Instacio OneWire para todos los dispositivos en el bus
 OneWire OneWire(ONE_WIRE_BUS);
-//OneWire ds(ONE_WIRE_BUS); habilitar para busquda de sensores
 
 
 
@@ -41,10 +44,9 @@ OneWire OneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&OneWire);
 
 // Defino direcciones de acceso a sensores
-
-  DeviceAddress sensor2 = { 0x28, 0xFF, 0x34, 0x71, 0x68, 0x14, 0x04, 0xC2 }; //Sensor1
-  DeviceAddress sensor1 = { 0x28, 0xFF, 0xB5, 0x80, 0x63, 0x14, 0x03, 0x78 }; //Sensor2
-  //DeviceAddress sensor1   = {0x28, 0xFF, 0x4A, 0xE4, 0x6D, 0x14, 0x04, 0x58}; //LEO
+DeviceAddress sensor2 = { 0x28, 0xFF, 0x34, 0x71, 0x68, 0x14, 0x04, 0xC2 }; //Sensor1
+DeviceAddress sensor1 = { 0x28, 0xFF, 0xB5, 0x80, 0x63, 0x14, 0x03, 0x78 }; //Sensor2
+//DeviceAddress sensor1   = {0x28, 0xFF, 0x4A, 0xE4, 0x6D, 0x14, 0x04, 0x58}; //LEO
 
 //////////////////////////////////////////////////////////////// VARIABLES GLOBALES//////////////////////////////////////////////////////////////////////////
 
@@ -65,10 +67,6 @@ int temperatura = 0;
 
 
 //Variables para almacenado de datos entrantes a serie
-//char comandoSerie[10]; // Creo array para almacenar comandos a procesar
-//char caracterSerieEntrante; // Creo variable para almacenar comando entrante via serie
-//byte indexComandoSerie = 0; // indice para recorrer array
-
 String inputString = "";         // Variable que almacena cada cadena entrante al puerto serie
 char inputChar []= {};
 boolean stringComplete = false;  // Define si se completó la cadena
@@ -77,6 +75,7 @@ boolean stringComplete = false;  // Define si se completó la cadena
 //Defino pines para electro valvulas y bomba
 int bomba_1 = 10;
 int bomba_2 = 11;
+int pinesBombas [] = {};
 
 //Estados de pines de relees para electro valvulas y bomba
 int estadoBomba_1 = HIGH;
