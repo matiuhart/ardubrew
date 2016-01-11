@@ -23,6 +23,7 @@ g1 ("g" hace un get de la cmdTemperatura a sensoresDeTemperatura1, el cual estar
 #include <LiquidCrystal.h>
 
 
+
 //Defino pin para busqueda de dispositivos OneWire
 OneWire  ds(9);  
 
@@ -43,6 +44,7 @@ OneWire OneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&OneWire);
 
 // Defino direcciones de acceso a sensores
+DeviceAddress sensoresTemp [] = {};
 DeviceAddress sensor1 = { 0x28, 0xFF, 0x34, 0x71, 0x68, 0x14, 0x04, 0xC2 }; //Sensor1
 DeviceAddress sensor0 = { 0x28, 0xFF, 0xB5, 0x80, 0x63, 0x14, 0x03, 0x78 }; //sensor1
 //DeviceAddress sensor0   = {0x28, 0xFF, 0x4A, 0xE4, 0x6D, 0x14, 0x04, 0x58}; //LEO
@@ -98,7 +100,7 @@ void setup(void){
   Serial.setTimeout(2000);
 
   // Buscar dispositivos 1-wire
-  //discoverOneWireDevices();
+  discoverOneWireDevices();
 
   // Inicializo LCD
   lcd.begin(16,2);
@@ -165,9 +167,10 @@ void serialEvent() {
   }
 }
 
+// Parseo de comandos entrantes
 void parsearComando(){
   char modo = inputString[0];
-  char cmdFermentadorNumero = inputString[1] - '0';;
+  char cmdFermentadorNumero = inputString[1] - '0';
   String tempStr = "";
 
   switch (modo) {
@@ -191,6 +194,7 @@ void parsearComando(){
   }
 }
 
+// Imprime caracteres entrantes
 void imprimirChars(){
     // Imprimo los caracteres dentro del array
     for (int i=0;i < inputString.length();i++) {
@@ -247,26 +251,42 @@ void discoverOneWireDevices(void) {
   byte addr[8];
   //byte present = 0;
   //byte data[12];
-  
+  String sensorEncontrado = "";
   
   Serial.print("Buscando dispositivos 1-Wire...\n\r");
   while(ds.search(addr)) {
-    Serial.print("\n\rSe encontro un dispositivo \'1-Wire\' device with address:\n\r");
+    Serial.print("\n\rSe encontro un dispositivo \'1-Wire\' direccion de dispositivo:\n\r");
     for( i = 0; i < 8; i++) {
+      sensorEncontrado += "0x";
       Serial.print("0x");
       if (addr[i] < 16) {
         Serial.print('0');
+        sensorEncontrado += "0";
       }
       Serial.print(addr[i], HEX);
+      sensorEncontrado += String(addr[i],HEX);
       if (i < 7) {
         Serial.print(", ");
+        sensorEncontrado += ", ";
       }
+      //sensoresTemp[i] = sensorEncontrado;
+      
+      Serial.print("\n\r\n\r");
+      Serial.print("Valor en espacio [");
+      Serial.print(i);
+      Serial.print("] es: ");
+      //Serial.print(sensoresTemp[i]);
+
     }
     if ( OneWire::crc8( addr, 7) != addr[7]) {
         Serial.print("CRC no valido!\n");
         return;
     }
   }
+
+  Serial.print("\n\r\n\r");
+  Serial.println("Mac de sensor en string: ");
+  Serial.println(sensorEncontrado);
   Serial.print("\n\r\n\rEso es todo.\r\n");
   ds.reset_search();
   return;
@@ -290,7 +310,7 @@ void imprimirCmdIn(){
   }
 }
 
-// Funcion para el control de cmdTemperatura
+// Funcion para el control de temperatura
 void controlarTemps(){
   long intervaloEncendidoActual = millis();
 
@@ -320,12 +340,6 @@ void controlarTemps(){
 */
   //Enciendo y apago valvulas segun las condiciones anteriores
   digitalWrite(bombaPin[0],bombaEstado[0]);
-  Serial.print("Pin n°: ");
-  Serial.println(bombaPin[0]);
-
-  Serial.print("Estado: ");
-  Serial.println(bombaEstado[0]);
-  
   digitalWrite(bombaPin[1],bombaEstado[0]);
 }
 
@@ -367,6 +381,6 @@ void sensarTemperatura(){
   //Recupero cmdTemperatura de sensor DS, convierto la temperatura de Farenheit a Celcius y paso valor a sensor 1
       sensors.requestTemperatures();
       temperatura[0] = recuperarTemperatura(sensor0);
-      temperatura[2] = recuperarTemperatura(sensor1);
+      temperatura[1] = recuperarTemperatura(sensor1);
   }
 }
