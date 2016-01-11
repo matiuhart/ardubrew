@@ -39,7 +39,6 @@ LiquidCrystal lcd(12,11,5,4,3,2);
 OneWire OneWire(ONE_WIRE_BUS);
 
 
-
 // Paso como referencia el bus a la lib Dallas
 DallasTemperature sensors(&OneWire);
 
@@ -75,7 +74,10 @@ boolean stringComplete = false;  // Define si se completó la cadena
 //Defino pines para electro valvulas y bomba
 int bomba_1 = 10;
 int bomba_2 = 11;
-int pinesBombas [] = {};
+// Para uso con array dinamico parametrizando cantidad de bombas
+int bombasCantidad = 3;
+int* bombasPines = 0;
+
 
 //Estados de pines de relees para electro valvulas y bomba
 int estadoBomba_1 = HIGH;
@@ -155,8 +157,9 @@ void loop(void){
   }
 
 ///////////////////////////////////////////////////////////////////////////////////
+
   
-  // Modifico array dinamicamente y convierto string to char
+  // Modifico array de caracteres entrantes dinamicamente y convierto string to char
   char inputChar[inputString.length()+1];
   inputString.toCharArray(inputChar,inputString.length()+1);
 
@@ -184,32 +187,10 @@ void loop(void){
 
 
 ///////////////////////////////////////Empiezo el control de temperatura segun temps comparando temperaturas en sensores 1 y 2 comparando con las fijadas en fermNum1 y fermNum2
-  long intervaloEncendidoActual = millis();
+  
+  controlarTemps();
 
-  //Cuando la temperatura del fermentador supere la deseada durante el intervalo seteado en (intervaloEncendidoBombas) se activan las bombas
-  if (sensoresDeTemperatura[1]> temperaturaSeteada[1] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_1 > intervaloEncendidoBombas){
-    estadoBomba_1=LOW;
-    intervaloEncendidoPrevBomba_1 = millis();
-
-  }
-  else if (sensoresDeTemperatura[1]<= temperaturaSeteada[1]){
-    estadoBomba_1=HIGH;
-  }
-
-  if (sensoresDeTemperatura[2]> temperaturaSeteada[2] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_2 > intervaloEncendidoBombas){
-    intervaloEncendidoPrevBomba_2 = millis();
-    estadoBomba_2=LOW;
-
-  }
-  else if (sensoresDeTemperatura[2]<= temperaturaSeteada[2]){
-    estadoBomba_2=HIGH;
-  }
-
-
-  //Enciendo y apago valvulas segun las condiciones anteriores
-  digitalWrite(bomba_1,estadoBomba_1);
-  digitalWrite(bomba_2,estadoBomba_2);
-
+  
 
   // Muestro datos por LCD
   unsigned long intervaloLCDPrintActual = millis();
@@ -376,3 +357,31 @@ void discoverOneWireDevices(void) {
   return;
 }
 
+void controlarTemps(){
+  long intervaloEncendidoActual = millis();
+
+  //Cuando la temperatura del fermentador supere la deseada durante el intervalo seteado en (intervaloEncendidoBombas) se activan las bombas
+  if (sensoresDeTemperatura[1]> temperaturaSeteada[1] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_1 > intervaloEncendidoBombas){
+    estadoBomba_1=LOW;
+    intervaloEncendidoPrevBomba_1 = millis();
+
+  }
+  else if (sensoresDeTemperatura[1]<= temperaturaSeteada[1]){
+    estadoBomba_1=HIGH;
+  }
+
+  if (sensoresDeTemperatura[2]> temperaturaSeteada[2] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_2 > intervaloEncendidoBombas){
+    intervaloEncendidoPrevBomba_2 = millis();
+    estadoBomba_2=LOW;
+
+  }
+  else if (sensoresDeTemperatura[2]<= temperaturaSeteada[2]){
+    estadoBomba_2=HIGH;
+  }
+
+
+  //Enciendo y apago valvulas segun las condiciones anteriores
+  digitalWrite(bomba_1,estadoBomba_1);
+  digitalWrite(bomba_2,estadoBomba_2);
+
+}
