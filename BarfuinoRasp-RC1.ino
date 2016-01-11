@@ -1,20 +1,20 @@
 #include <Arduino.h>
 /*
 ACERCA
-Este control de temperatura para fue creado para controlar la fermentacion de la cerveza. El objetivo de este es que la temperatura que es tomada por los sensores dentro del fermentador (sensoresDeTemperaturax),
-no supere la especificada via serial que es guardadda en fermNumx. El valor de temperatura para cada fermentador(fermNumx) es eviado mediante una app python via puerto serie y estos son controlados directamente por arduino,
-ademas se agrego la posibilidad de consultar la temperatura de los sensores dentro de los fermentadores.
+Este control de cmdTemperatura para fue creado para controlar la fermentacion de la cerveza. El objetivo de este es que la cmdTemperatura que es tomada por los sensores dentro del fermentador (sensoresDeTemperaturax),
+no supere la especificada via serial que es guardadda en fermNumx. El valor de cmdTemperatura para cada fermentador(fermNumx) es eviado mediante una app python via puerto serie y estos son controlados directamente por arduino,
+ademas se agrego la posibilidad de consultar la cmdTemperatura de los sensores dentro de los fermentadores.
 
 
 COMANDOS
 Los comandos son recibidos por arduino via serial y hasta el momento puede realizar dos acciones como las antes descriptas.
 Ejemplos.
 
-Seteo de temperatura a 23 grados en fermentador 1:
-s123 ("s" le dice a arduino que el comando es de seteo, "1" que es para fermNum1 y por ultimo "23" es la temperatura a fijar en este fermentador)
+Seteo de cmdTemperatura a 23 grados en fermentador 1:
+s123 ("s" le dice a arduino que el comando es de seteo, "1" que es para fermNum1 y por ultimo "23" es la cmdTemperatura a fijar en este fermentador)
 
 Temperatura actual en fermentador 1:
-g1 ("g" hace un get de la temperatura a sensoresDeTemperatura1, el cual estaria dentro del fermentador 1)
+g1 ("g" hace un get de la cmdTemperatura a sensoresDeTemperatura1, el cual estaria dentro del fermentador 1)
 
 */
 //Se importan las librerías
@@ -52,17 +52,12 @@ DeviceAddress sensor1 = { 0x28, 0xFF, 0xB5, 0x80, 0x63, 0x14, 0x03, 0x78 }; //Se
 //Variables de lectura para Temperatura de sensores 1 a 5
 float sensoresDeTemperatura[6]={};
 
-float sensoresDeTemperatura1 = 0;
-float sensoresDeTemperatura2 = 0;
-
-
 //Variables para almacenar temperaturas fijadas para fermentadores 1 y 2
 int temperaturaSeteada[6] = {99,99,99,99,99,99};
 
-
 //Variables para consulta y seteo de temperaturas
-int fermentadorNumero = 0;
-int temperatura = 0;
+int cmdFermentadorNumero = 0;
+int cmdTemperatura = 0;
 
 
 //Variables para almacenado de datos entrantes a serie
@@ -74,7 +69,7 @@ boolean stringComplete = false;  // Define si se completó la cadena
 //Defino pines para electro valvulas y bomba
 int bomba_1 = 10;
 int bomba_2 = 11;
-// Para uso con array dinamico parametrizando cantidad de bombas
+// TODO // Para uso con array dinamico parametrizando cantidad de bombas
 int bombasCantidad = 3;
 int* bombasPines = 0;
 
@@ -91,29 +86,16 @@ long intervaloEncendidoPrevBomba_1 = 0;
 long intervaloEncendidoPrevBomba_2 = 0;
 
 
-//Intervalo minimo para tomar temperatura nuevamente(30 segundos)
+//Intervalo minimo para tomar cmdTemperatura nuevamente(30 segundos)
 long intervaloTomaTemp = 30000;
 long intervaloTomaTempPrevia = 0;
 
 
 // Intervalo de espera para LCD
 unsigned long intervaloLCDPrint = 1500;
-unsigned long intervaloLCD2 = 2000;
 unsigned long intervaloLCDPrintPrev = 0;
 unsigned long intervaloLCDScrollPrev = 0;
 
-int getTemp (int numeroFermentador);
-int setearTemperatura (int numeroFermentador, int temperatura);
-//void imprimirTemperatura(DeviceAddress deviceAddress);
-long recuperarTemperatura(DeviceAddress deviceAddress);
-
-
-int getTemp (int numeroFermentador);
-int getSetTemp (int numeroFermentador);
-int setearTemperatura (int numeroFermentador, int temperatura);
-void imprimirTemperatura(DeviceAddress deviceAddress);
-long imprimirTemperaturaLcd(DeviceAddress deviceAddress);
-long recuperarTemperatura(DeviceAddress deviceAddress);
 
 void setup(void){
   Serial.begin(9600);
@@ -122,10 +104,10 @@ void setup(void){
   // Buscar dispositivos 1-wire
   //discoverOneWireDevices();
 
-  // Inicializao LCD
+  // Inicializo LCD
   lcd.begin(16,2);
 
-  // Inicializo sensores para lectura
+  // Inicializo sensores DS 
   sensors.begin();
 
   //Defino pines a utilizar como salida para electro valvulas y bomba
@@ -150,7 +132,7 @@ void loop(void){
 
   //Tomo temperaturas cada 2 minutos
   if (intervaloTomaTempActual - intervaloTomaTempPrevia > intervaloTomaTemp){
-  //Recupero temperatura de sensor DS, convierto la temperatura de Farenheit a Celcius y paso valor a sensor 1
+  //Recupero cmdTemperatura de sensor DS, convierto la cmdTemperatura de Farenheit a Celcius y paso valor a sensor 1
       sensors.requestTemperatures();
       sensoresDeTemperatura[1] = recuperarTemperatura(sensor1);
       sensoresDeTemperatura[2] = recuperarTemperatura(sensor2);
@@ -181,7 +163,7 @@ void loop(void){
 
   }
 
-//Empiezo el control de temperatura segun temps comparando temperaturas en sensores 1 y 2 comparando con las fijadas en fermNum1 y fermNum2
+//Empiezo el control de cmdTemperatura segun temps comparando temperaturas en sensores 1 y 2 comparando con las fijadas en fermNum1 y fermNum2
   
   controlarTemps();
  
@@ -217,27 +199,27 @@ void serialEvent() {
 
 void parsearComando(){
   char modo = inputString[0];
-  char fermentadorNumero = inputString[1] - '0';;
+  char cmdFermentadorNumero = inputString[1] - '0';;
   String tempStr = "";
 
   switch (modo) {
       case 's':
           tempStr += inputString[2];
           tempStr += inputString[3];
-          temperatura = tempStr.toInt();
+          cmdTemperatura = tempStr.toInt();
           Serial.println("Modo seteo activado");
-          setearTemperatura(fermentadorNumero,temperatura);
+          setearTemperatura(cmdFermentadorNumero,cmdTemperatura);
           
       
         break;
       case 'g':
           Serial.println("Modo consulta activado");
-          temperatura=getTemp(fermentadorNumero);
-          Serial.println(temperatura);
+          cmdTemperatura=getTemp(cmdFermentadorNumero);
+          Serial.println(cmdTemperatura);
       
         break;
       case 'f':
-          Serial.println(getSetTemp(fermentadorNumero));
+          Serial.println(getSetTemp(cmdFermentadorNumero));
         break;
       default:
         Serial.println("Ingrese un comando valido");
@@ -253,7 +235,7 @@ void imprimirChars(){
     }
 }
 
-//Funcion para recuperar temperatura de fermentador en variable de ultima consulta
+//Funcion para recuperar cmdTemperatura de fermentador en variable de ultima consulta
 int getTemp (int numeroFermentador){
     int result;
     result = sensoresDeTemperatura[numeroFermentador];
@@ -268,9 +250,9 @@ int getSetTemp (int numeroFermentador){
     return result;
 }
 
-//Funcion para seteo de temperatura en fermentador
-int setearTemperatura (int numeroFermentador, int temperatura){
-    temperaturaSeteada[numeroFermentador]=temperatura;
+//Funcion para seteo de cmdTemperatura en fermentador
+int setearTemperatura (int numeroFermentador, int cmdTemperatura){
+    temperaturaSeteada[numeroFermentador]=cmdTemperatura;
 
     Serial.print("Temperatura en fermentador ");
     Serial.print(numeroFermentador);
@@ -328,11 +310,11 @@ void discoverOneWireDevices(void) {
   return;
 }
 
-// Funcion para el control de temperatura
+// Funcion para el control de cmdTemperatura
 void controlarTemps(){
   long intervaloEncendidoActual = millis();
 
-  //Cuando la temperatura del fermentador supere la deseada durante el intervalo seteado en (intervaloEncendidoBombas) se activan las bombas
+  //Cuando la cmdTemperatura del fermentador supere la deseada durante el intervalo seteado en (intervaloEncendidoBombas) se activan las bombas
   if (sensoresDeTemperatura[1]> temperaturaSeteada[1] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_1 > intervaloEncendidoBombas){
     estadoBomba_1=LOW;
     intervaloEncendidoPrevBomba_1 = millis();
