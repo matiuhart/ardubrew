@@ -67,12 +67,11 @@ boolean stringComplete = false;  // Define si se completó la cadena
 
 
 //Defino pines para electro valvulas y bomba
-int bomba_1 = 10;
-int bomba_2 = 11;
+int bombasPines [] = {10,11};
 
 // TODO // Para uso con array dinamico parametrizando cantidad de bombas
 int bombasCantidad = 3;
-int* bombasPines = 0;
+//int* bombasPines = 0;
 
 
 //Estados de pines de relees para electro valvulas y bomba
@@ -113,8 +112,8 @@ void setup(void){
 
   //Defino pines a utilizar como salida para electro valvulas y bomba
   //for (int pin=9; pin>12; pin++){
-  pinMode(bomba_1,OUTPUT);
-  pinMode(bomba_2,OUTPUT);
+  pinMode(bombasPines[0],OUTPUT);
+  pinMode(bombasPines[1],OUTPUT);
   //}
 
 
@@ -336,8 +335,8 @@ void controlarTemps(){
 
 
   //Enciendo y apago valvulas segun las condiciones anteriores
-  digitalWrite(bomba_1,estadoBomba_1);
-  digitalWrite(bomba_2,estadoBomba_2);
+  digitalWrite(bombasPines[0],estadoBomba_1);
+  digitalWrite(bombasPines[1],estadoBomba_2);
 
 }
 
