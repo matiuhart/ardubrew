@@ -72,7 +72,7 @@ int bombaPin [] = {10,11};
 //int* bombaPin = 0;
 
 //Estados de pines de relees para electro valvulas y bomba
-int estadoBomba [] = {HIGH,HIGH};
+int bombaEstado [] = {HIGH,HIGH};
 
 //Variables para control de encendido de bombas, espera tiempo minimo de espera para encendido(5 minutos)
 long intervaloEncendidoBombas = 500000;
@@ -82,8 +82,8 @@ long intervaloEncendidoPrevBomba_1 = 0;
 long intervaloEncendidoPrevBomba_2 = 0;
 
 //Intervalo minimo para tomar cmdTemperatura nuevamente(30 segundos)
-long intervaloTomaTemp = 30000;
-long intervaloTomaTempPrevia = 0;
+long tempIntervaloSensado = 30000;
+long tempIntervaloSensadoPrev = 0;
 
 // Intervalo de espera para LCD
 unsigned long intervaloLCDPrint = 1500;
@@ -119,7 +119,7 @@ void setup(void){
 void loop(void){
 
 /////////////////////////////////////////////////////////////////////////////// VARIABLES LOCALES DE LOOP()////////////////////////////////////////////////////////////////////////////
-
+  // Realiza la lectura de temperatura de todos los sensores cada 2 mins y son guardadas en array temperatura
   sensarTemperatura();
 
   // TODO// Modifico array de caracteres entrantes dinamicamente y convierto string to char
@@ -129,22 +129,10 @@ void loop(void){
   // Llamo a la funcion de evento serie para verificar entrada de datos
   serialEvent();
   
-  // Imprime la cadena cuando llega una nueva linea:
-  if (stringComplete) {
+  // Imprime comando entrante
+  imprimirCmdIn();
 
-    Serial.println(inputString);
-
-    // Parseo de comandos entrantes
-    parsearComando();
-  
-    // Limpio la cadena para esperar nuevos datos entrantes
-    memset(inputChar, 0, sizeof(inputChar));
-    inputString = "";
-    stringComplete = false;
-
-  }
-
-  //Empiezo el control de cmdTemperatura segun temps comparando temperaturas en sensores 1 y 2 comparando con las fijadas en fermNum1 y fermNum2
+  //Empiezo el control de cmdTemperatura segun temps comparando temperaturas en sensores 1 y 2 con las fijadas en fermNum1 y fermNum2
   controlarTemps();
  
   // Muestro datos por LCD
@@ -153,7 +141,7 @@ void loop(void){
 }
 
 /////////////////////////////////////////////////////////////////////FUNCIONES///////////////////////////////////////////////////////////////////////
-// Evento en serie (Lee cadena entrante a puerto serie y luego de un "\n" almacena el string en inputString)
+// Evento en serie (Lee cadena entrante a puerto serie y luego de un "\n" almacena el comando en inputString)
 void serialEvent() {
   while (Serial.available()) {
     
@@ -282,32 +270,50 @@ void discoverOneWireDevices(void) {
   return;
 }
 
+//Imprime comando entrante
+void imprimirCmdIn(){
+  // Imprime la cadena cuando llega una nueva linea:
+  if (stringComplete) {
+
+    Serial.println(inputString);
+
+    // Parseo de comandos entrantes
+    parsearComando();
+  
+    // Limpio la cadena para esperar nuevos datos entrantes
+    memset(inputChar, 0, sizeof(inputChar));
+    inputString = "";
+    stringComplete = false;
+
+  }
+}
+
 // Funcion para el control de cmdTemperatura
 void controlarTemps(){
   long intervaloEncendidoActual = millis();
 
   //Cuando la cmdTemperatura del fermentador supere la deseada durante el intervalo seteado en (intervaloEncendidoBombas) se activan las bombas
   if (temperatura[1]> temperaturaSeteada[1] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_1 > intervaloEncendidoBombas){
-    estadoBomba[0]=LOW;
+    bombaEstado[0]=LOW;
     intervaloEncendidoPrevBomba_1 = millis();
 
   }
   else if (temperatura[1]<= temperaturaSeteada[1]){
-    estadoBomba[0]=HIGH;
+    bombaEstado[0]=HIGH;
   }
 
   if (temperatura[2]> temperaturaSeteada[2] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_2 > intervaloEncendidoBombas){
     intervaloEncendidoPrevBomba_2 = millis();
-    estadoBomba[1]=LOW;
+    bombaEstado[1]=LOW;
 
   }
   else if (temperatura[2]<= temperaturaSeteada[2]){
-    estadoBomba[1]=HIGH;
+    bombaEstado[1]=HIGH;
   }
 
   //Enciendo y apago valvulas segun las condiciones anteriores
-  digitalWrite(bombaPin[0],estadoBomba[0]);
-  digitalWrite(bombaPin[1],estadoBomba[1]);
+  digitalWrite(bombaPin[0],bombaEstado[0]);
+  digitalWrite(bombaPin[1],bombaEstado[1]);
 }
 
 void escrituraLCD(){
@@ -344,7 +350,7 @@ void sensarTemperatura(){
   unsigned long intervaloTomaTempActual = millis();
 
   //Tomo temperaturas cada 2 minutos
-  if (intervaloTomaTempActual - intervaloTomaTempPrevia > intervaloTomaTemp){
+  if (intervaloTomaTempActual - tempIntervaloSensadoPrev > tempIntervaloSensado){
   //Recupero cmdTemperatura de sensor DS, convierto la temperatura de Farenheit a Celcius y paso valor a sensor 1
       sensors.requestTemperatures();
       temperatura[1] = recuperarTemperatura(sensor1);
