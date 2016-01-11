@@ -43,9 +43,9 @@ OneWire OneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&OneWire);
 
 // Defino direcciones de acceso a sensores
-DeviceAddress sensor2 = { 0x28, 0xFF, 0x34, 0x71, 0x68, 0x14, 0x04, 0xC2 }; //Sensor1
-DeviceAddress sensor1 = { 0x28, 0xFF, 0xB5, 0x80, 0x63, 0x14, 0x03, 0x78 }; //Sensor2
-//DeviceAddress sensor1   = {0x28, 0xFF, 0x4A, 0xE4, 0x6D, 0x14, 0x04, 0x58}; //LEO
+DeviceAddress sensor1 = { 0x28, 0xFF, 0x34, 0x71, 0x68, 0x14, 0x04, 0xC2 }; //Sensor1
+DeviceAddress sensor0 = { 0x28, 0xFF, 0xB5, 0x80, 0x63, 0x14, 0x03, 0x78 }; //sensor1
+//DeviceAddress sensor0   = {0x28, 0xFF, 0x4A, 0xE4, 0x6D, 0x14, 0x04, 0x58}; //LEO
 
 //////////////////////////////////////////////////////////////// VARIABLES GLOBALES//////////////////////////////////////////////////////////////////////////
 
@@ -68,18 +68,20 @@ boolean stringComplete = false;  // Define si se completó la cadena
 int bombaPin [] = {10,11};
 
 // TODO // Para uso con array dinamico parametrizando cantidad de bombas
-//int bombasCantidad = 3;
+int bombasCantidad = 2;
 //int* bombaPin = 0;
 
 //Estados de pines de relees para electro valvulas y bomba
-int bombaEstado [] = {HIGH,HIGH};
+//int bombaEstado [] = {HIGH,HIGH};
+int bombaEstado [] = {LOW,LOW};
 
 //Variables para control de encendido de bombas, espera tiempo minimo de espera para encendido(5 minutos)
-long intervaloEncendidoBombas = 500000;
+//long intervaloEncendidoBombas = 500000;
+long intervaloEncendidoBombas = 500;
 
 ///Almaceno timestamp de encendido anterior
+long intervaloEncendidoPrevBomba_0 = 0;
 long intervaloEncendidoPrevBomba_1 = 0;
-long intervaloEncendidoPrevBomba_2 = 0;
 
 //Intervalo minimo para tomar cmdTemperatura nuevamente(30 segundos)
 long tempIntervaloSensado = 30000;
@@ -105,14 +107,14 @@ void setup(void){
   sensors.begin();
 
   //Defino pines a utilizar como salida para electro valvulas y bomba
-  //for (int pin=9; pin>12; pin++){
-  pinMode(bombaPin[0],OUTPUT);
-  pinMode(bombaPin[1],OUTPUT);
-  //}
+  for (int pin=10; pin > pin + bombasCantidad; pin++){
+  pinMode(bombaPin[pin],OUTPUT);
+  }
+  Serial.println("Pines seteados en modo salida");
 
   //Seteo de resolucion para sensores
+  sensors.setResolution(sensor0, TEMPERATURE_PRECISION);
   sensors.setResolution(sensor1, TEMPERATURE_PRECISION);
-  sensors.setResolution(sensor2, TEMPERATURE_PRECISION);
 
 }
 
@@ -292,28 +294,39 @@ void imprimirCmdIn(){
 void controlarTemps(){
   long intervaloEncendidoActual = millis();
 
-  //Cuando la cmdTemperatura del fermentador supere la deseada durante el intervalo seteado en (intervaloEncendidoBombas) se activan las bombas
-  if (temperatura[1]> temperaturaSeteada[1] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_1 > intervaloEncendidoBombas){
-    bombaEstado[0]=LOW;
-    intervaloEncendidoPrevBomba_1 = millis();
+  //Cuando la cmdTemperatura del fermentador supere la seteada en temperaturaSeteada[x] durante el intervalo seteado en (intervaloEncendidoBombas) se activa las bomba
+  if (temperatura[0]> temperaturaSeteada[0] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_0 > intervaloEncendidoBombas){
+    //bombaEstado[0]=LOW;
+    bombaEstado[0]=HIGH;
+    intervaloEncendidoPrevBomba_0 = millis();
+    Serial.println("Bomba activada en fermentador 0");
 
   }
-  else if (temperatura[1]<= temperaturaSeteada[1]){
+  else if (temperatura[0]<= temperaturaSeteada[0]){
+    //bombaEstado[0]=HIGH;
+    bombaEstado[0]=LOW;
+  }
+
+/*
+  // DesCOMENTAR PARA USO DE ELECTROVALVULAS
+  if (temperatura[2]> temperaturaSeteada[1] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_1 > intervaloEncendidoBombas){
+    intervaloEncendidoPrevBomba_1 = millis();
+    bombaEstado[0]=LOW;
+
+  }
+  else if (temperatura[2]<= temperaturaSeteada[1]){
     bombaEstado[0]=HIGH;
   }
-
-  if (temperatura[2]> temperaturaSeteada[2] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_2 > intervaloEncendidoBombas){
-    intervaloEncendidoPrevBomba_2 = millis();
-    bombaEstado[1]=LOW;
-
-  }
-  else if (temperatura[2]<= temperaturaSeteada[2]){
-    bombaEstado[1]=HIGH;
-  }
-
+*/
   //Enciendo y apago valvulas segun las condiciones anteriores
   digitalWrite(bombaPin[0],bombaEstado[0]);
-  digitalWrite(bombaPin[1],bombaEstado[1]);
+  Serial.print("Pin n°: ");
+  Serial.println(bombaPin[0]);
+
+  Serial.print("Estado: ");
+  Serial.println(bombaEstado[0]);
+  
+  digitalWrite(bombaPin[1],bombaEstado[0]);
 }
 
 void escrituraLCD(){
@@ -324,12 +337,12 @@ void escrituraLCD(){
   if (intervaloLCDPrintActual - intervaloLCDPrintPrev > intervaloLCDPrint){
     lcd.setCursor(5,0);
     lcd.print("Fermentador: ");
-    lcd.print(temperatura[1]);
+    lcd.print(temperatura[0]);
     lcd.print("C");
 
     lcd.setCursor(14,3);
     lcd.print("Temperatura seteada: ");
-    lcd.print(temperaturaSeteada[1]);
+    lcd.print(temperaturaSeteada[0]);
     lcd.print("C");
     intervaloLCDPrintPrev = millis();
 
@@ -353,7 +366,7 @@ void sensarTemperatura(){
   if (intervaloTomaTempActual - tempIntervaloSensadoPrev > tempIntervaloSensado){
   //Recupero cmdTemperatura de sensor DS, convierto la temperatura de Farenheit a Celcius y paso valor a sensor 1
       sensors.requestTemperatures();
-      temperatura[1] = recuperarTemperatura(sensor1);
-      temperatura[2] = recuperarTemperatura(sensor2);
+      temperatura[0] = recuperarTemperatura(sensor0);
+      temperatura[2] = recuperarTemperatura(sensor1);
   }
 }
