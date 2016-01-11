@@ -50,7 +50,7 @@ DeviceAddress sensor1 = { 0x28, 0xFF, 0xB5, 0x80, 0x63, 0x14, 0x03, 0x78 }; //Se
 //////////////////////////////////////////////////////////////// VARIABLES GLOBALES//////////////////////////////////////////////////////////////////////////
 
 //Variables de lectura para Temperatura de sensores 1 a 5
-float sensoresDeTemperatura[6]={};
+float temperatura[6]={};
 
 //Variables para almacenar temperaturas fijadas para fermentadores 1 y 2
 int temperaturaSeteada[6] = {99,99,99,99,99,99};
@@ -69,6 +69,7 @@ boolean stringComplete = false;  // Define si se completó la cadena
 //Defino pines para electro valvulas y bomba
 int bomba_1 = 10;
 int bomba_2 = 11;
+
 // TODO // Para uso con array dinamico parametrizando cantidad de bombas
 int bombasCantidad = 3;
 int* bombasPines = 0;
@@ -134,8 +135,8 @@ void loop(void){
   if (intervaloTomaTempActual - intervaloTomaTempPrevia > intervaloTomaTemp){
   //Recupero cmdTemperatura de sensor DS, convierto la cmdTemperatura de Farenheit a Celcius y paso valor a sensor 1
       sensors.requestTemperatures();
-      sensoresDeTemperatura[1] = recuperarTemperatura(sensor1);
-      sensoresDeTemperatura[2] = recuperarTemperatura(sensor2);
+      temperatura[1] = recuperarTemperatura(sensor1);
+      temperatura[2] = recuperarTemperatura(sensor2);
   }
 
   // Modifico array de caracteres entrantes dinamicamente y convierto string to char
@@ -238,7 +239,7 @@ void imprimirChars(){
 //Funcion para recuperar cmdTemperatura de fermentador en variable de ultima consulta
 int getTemp (int numeroFermentador){
     int result;
-    result = sensoresDeTemperatura[numeroFermentador];
+    result = temperatura[numeroFermentador];
 
     return result;
 }
@@ -315,21 +316,21 @@ void controlarTemps(){
   long intervaloEncendidoActual = millis();
 
   //Cuando la cmdTemperatura del fermentador supere la deseada durante el intervalo seteado en (intervaloEncendidoBombas) se activan las bombas
-  if (sensoresDeTemperatura[1]> temperaturaSeteada[1] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_1 > intervaloEncendidoBombas){
+  if (temperatura[1]> temperaturaSeteada[1] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_1 > intervaloEncendidoBombas){
     estadoBomba_1=LOW;
     intervaloEncendidoPrevBomba_1 = millis();
 
   }
-  else if (sensoresDeTemperatura[1]<= temperaturaSeteada[1]){
+  else if (temperatura[1]<= temperaturaSeteada[1]){
     estadoBomba_1=HIGH;
   }
 
-  if (sensoresDeTemperatura[2]> temperaturaSeteada[2] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_2 > intervaloEncendidoBombas){
+  if (temperatura[2]> temperaturaSeteada[2] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_2 > intervaloEncendidoBombas){
     intervaloEncendidoPrevBomba_2 = millis();
     estadoBomba_2=LOW;
 
   }
-  else if (sensoresDeTemperatura[2]<= temperaturaSeteada[2]){
+  else if (temperatura[2]<= temperaturaSeteada[2]){
     estadoBomba_2=HIGH;
   }
 
@@ -348,7 +349,7 @@ void escrituraLCD(){
   if (intervaloLCDPrintActual - intervaloLCDPrintPrev > intervaloLCDPrint){
     lcd.setCursor(5,0);
     lcd.print("Fermentador: ");
-    lcd.print(sensoresDeTemperatura[1]);
+    lcd.print(temperatura[1]);
     lcd.print("C");
 
     lcd.setCursor(14,3);
