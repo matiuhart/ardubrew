@@ -156,9 +156,6 @@ void loop(void){
       sensoresDeTemperatura[2] = recuperarTemperatura(sensor2);
   }
 
-///////////////////////////////////////////////////////////////////////////////////
-
-  
   // Modifico array de caracteres entrantes dinamicamente y convierto string to char
   char inputChar[inputString.length()+1];
   inputString.toCharArray(inputChar,inputString.length()+1);
@@ -184,39 +181,13 @@ void loop(void){
 
   }
 
-
-
-///////////////////////////////////////Empiezo el control de temperatura segun temps comparando temperaturas en sensores 1 y 2 comparando con las fijadas en fermNum1 y fermNum2
+//Empiezo el control de temperatura segun temps comparando temperaturas en sensores 1 y 2 comparando con las fijadas en fermNum1 y fermNum2
   
   controlarTemps();
-
+ 
+// Muestro datos por LCD
+  escrituraLCD();
   
-
-  // Muestro datos por LCD
-  unsigned long intervaloLCDPrintActual = millis();
-
-
-if (intervaloLCDPrintActual - intervaloLCDPrintPrev > intervaloLCDPrint){
-  lcd.setCursor(5,0);
-  lcd.print("Fermentador: ");
-  lcd.print(sensoresDeTemperatura[1]);
-  lcd.print("C");
-
-  lcd.setCursor(14,3);
-  lcd.print("Temperatura seteada: ");
-  lcd.print(temperaturaSeteada[1]);
-  lcd.print("C");
-  intervaloLCDPrintPrev = millis();
-
-  }
-
-  unsigned long intervaloLCDScrollActual = millis();
-  if (intervaloLCDScrollActual - intervaloLCDScrollPrev > intervaloLCDPrint){
-    for (int scrollCounter = 0; scrollCounter < 31; scrollCounter++){
-      lcd.scrollDisplayRight();
-      intervaloLCDScrollPrev = millis();
-    }
-  }
 }
 
 /////////////////////////////////////////////////////////////////////FUNCIONES///////////////////////////////////////////////////////////////////////
@@ -326,7 +297,7 @@ long recuperarTemperatura(DeviceAddress deviceAddress){
     return tempC;
 }
 
-
+// Funcion para busqueda de dispositivos OneWire
 void discoverOneWireDevices(void) {
   byte i;
   byte addr[8];
@@ -357,6 +328,7 @@ void discoverOneWireDevices(void) {
   return;
 }
 
+// Funcion para el control de temperatura
 void controlarTemps(){
   long intervaloEncendidoActual = millis();
 
@@ -384,4 +356,32 @@ void controlarTemps(){
   digitalWrite(bomba_1,estadoBomba_1);
   digitalWrite(bomba_2,estadoBomba_2);
 
+}
+
+void escrituraLCD(){
+
+  unsigned long intervaloLCDPrintActual = millis();
+
+
+  if (intervaloLCDPrintActual - intervaloLCDPrintPrev > intervaloLCDPrint){
+    lcd.setCursor(5,0);
+    lcd.print("Fermentador: ");
+    lcd.print(sensoresDeTemperatura[1]);
+    lcd.print("C");
+
+    lcd.setCursor(14,3);
+    lcd.print("Temperatura seteada: ");
+    lcd.print(temperaturaSeteada[1]);
+    lcd.print("C");
+    intervaloLCDPrintPrev = millis();
+
+    }
+
+  unsigned long intervaloLCDScrollActual = millis();
+  if (intervaloLCDScrollActual - intervaloLCDScrollPrev > intervaloLCDPrint){
+    for (int scrollCounter = 0; scrollCounter < 31; scrollCounter++){
+      lcd.scrollDisplayRight();
+      intervaloLCDScrollPrev = millis();
+    }
+  }
 }
