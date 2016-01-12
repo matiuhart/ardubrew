@@ -33,6 +33,15 @@ LiquidCrystal lcd(12,11,5,4,3,2);
 // Defino pin para sensores DS
 #define ONE_WIRE_BUS 9
 
+// Cantidad de sensores conectados
+#define NumberOfDevices 2 
+// Device Addresses are 8-element byte arrays
+byte allAddress [NumberOfDevices][8];
+// Declare variable to store number of One Wire devices that are actually discovered.
+byte totalDevices; 
+
+
+
 // Defino Precision de lectura
 #define TEMPERATURE_PRECISION 9
 
@@ -44,7 +53,7 @@ OneWire OneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&OneWire);
 
 // Defino direcciones de acceso a sensores
-DeviceAddress sensoresTemp [] = {};
+DeviceAddress sensoresTemp [2][8] = {};
 DeviceAddress sensor1 = { 0x28, 0xFF, 0x34, 0x71, 0x68, 0x14, 0x04, 0xC2 }; //Sensor1
 DeviceAddress sensor0 = { 0x28, 0xFF, 0xB5, 0x80, 0x63, 0x14, 0x03, 0x78 }; //sensor1
 //DeviceAddress sensor0   = {0x28, 0xFF, 0x4A, 0xE4, 0x6D, 0x14, 0x04, 0x58}; //LEO
@@ -98,9 +107,13 @@ unsigned long intervaloLCDScrollPrev = 0;
 void setup(void){
   Serial.begin(9600);
   Serial.setTimeout(2000);
-
+  sensors.begin();
   // Buscar dispositivos 1-wire
-  discoverOneWireDevices();
+  sensors.begin();
+  // Guarda todas las mac de los sensores enallAddress array 
+  totalDevices = discoverOneWireDevices();         
+  for (byte i=0; i < totalDevices; i++) 
+    sensors.setResolution(allAddress[i], 10);
 
   // Inicializo LCD
   lcd.begin(16,2);
@@ -246,51 +259,37 @@ long recuperarTemperatura(DeviceAddress deviceAddress){
 }
 
 // Funcion para busqueda de dispositivos OneWire
-void discoverOneWireDevices(void) {
+byte discoverOneWireDevices() {
+  byte j=0;                                        // search for one wire devices and
+                                                   // copy to device address arrays.
+  while ((j < NumberOfDevices) && (OneWire.search(allAddress[j]))) {        
+    j++;
+  }
+  for (byte i=0; i < j; i++) {
+    Serial.print("Device ");
+    Serial.print(i);  
+    Serial.print(": ");                          
+    printAddress(allAddress[i]);                  // print address from each device address arry.
+  }
+  Serial.print("\r\n");
+  return j                      ;                 // return total number of devices found.
+}
+
+// Imprime direcciones de sensores descubiertos
+void printAddress(DeviceAddress addr) {
   byte i;
-  byte addr[8];
-  //byte present = 0;
-  //byte data[12];
-  String sensorEncontrado = "";
-  
-  Serial.print("Buscando dispositivos 1-Wire...\n\r");
-  while(ds.search(addr)) {
-    Serial.print("\n\rSe encontro un dispositivo \'1-Wire\' direccion de dispositivo:\n\r");
-    for( i = 0; i < 8; i++) {
-      sensorEncontrado += "0x";
+  for( i=0; i < 8; i++) {                         // prefix the printout with 0x
       Serial.print("0x");
       if (addr[i] < 16) {
-        Serial.print('0');
-        sensorEncontrado += "0";
+        Serial.print('0');                        // add a leading '0' if required.
       }
-      Serial.print(addr[i], HEX);
-      sensorEncontrado += String(addr[i],HEX);
+      Serial.print(addr[i], HEX);                 // print the actual value in HEX
       if (i < 7) {
         Serial.print(", ");
-        sensorEncontrado += ", ";
       }
-      //sensoresTemp[i] = sensorEncontrado;
-      
-      Serial.print("\n\r\n\r");
-      Serial.print("Valor en espacio [");
-      Serial.print(i);
-      Serial.print("] es: ");
-      //Serial.print(sensoresTemp[i]);
-
     }
-    if ( OneWire::crc8( addr, 7) != addr[7]) {
-        Serial.print("CRC no valido!\n");
-        return;
-    }
-  }
-
-  Serial.print("\n\r\n\r");
-  Serial.println("Mac de sensor en string: ");
-  Serial.println(sensorEncontrado);
-  Serial.print("\n\r\n\rEso es todo.\r\n");
-  ds.reset_search();
-  return;
-}
+  Serial.print("\r\n");
+} 
 
 //Imprime comando entrante
 void imprimirCmdIn(){
