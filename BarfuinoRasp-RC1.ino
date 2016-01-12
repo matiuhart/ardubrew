@@ -343,9 +343,7 @@ void controlarTemps(){
 }
 
 void escrituraLCD(){
-
   unsigned long intervaloLCDPrintActual = millis();
-
 
   if (intervaloLCDPrintActual - intervaloLCDPrintPrev > intervaloLCDPrint){
     lcd.setCursor(5,0);
@@ -378,8 +376,9 @@ void sensarTemperatura(){
   //Tomo temperaturas cada 2 minutos
   if (intervaloTomaTempActual - tempIntervaloSensadoPrev > tempIntervaloSensado){
   //Recupero cmdTemperatura de sensor DS, convierto la temperatura de Farenheit a Celcius y paso valor a sensor 1
-      sensors.requestTemperatures();
-      temperatura[0] = recuperarTemperatura(sensor0);
-      temperatura[1] = recuperarTemperatura(sensor1);
+    sensors.requestTemperatures();
+    for (int i = 0; i < NumberOfDevices; ++i){
+      temperatura[i] = recuperarTemperatura(allAddress[i]);
+    }
   }
 }
