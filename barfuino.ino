@@ -71,7 +71,8 @@ int bombaPin [] = {10,11};
 //int* bombaPin = 0;
 
 //Estados de pines de relees para electro valvulas y bomba
-int bombaEstado [] = {LOW,LOW};
+//int bombaEstado [] = {LOW,LOW};
+int bombaEstado [] = {HIGH,HIGH};
 //int bombaEstado [bombasCantidad] = {LOW,LOW};
 
 //Variables para control de encendido de bombas, espera tiempo minimo de espera para encendido(5 minutos)
@@ -306,16 +307,16 @@ void controlarTemps(){
   // durante el intervalo seteado en (intervaloEncendidoBombas) se activa las bomba
   if (temperatura[0]> temperaturaSeteada[0] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_0 > intervaloEncendidoBombas){
     
-     bombaEstado[0]=HIGH;
+     bombaEstado[0]=LOW;
      
     
     intervaloEncendidoPrevBomba_0 = millis();
-    Serial.print("Bomba activada en fermentador 0 con pin ");
-    Serial.println(bombaPin[0]);
+    //Serial.print("Bomba activada en fermentador 0 con pin ");
+    //Serial.println(bombaPin[0]);
 
   }
   else if (temperatura[0]<= temperaturaSeteada[0]){
-    bombaEstado[0]=LOW;
+    bombaEstado[0]=HIGH;
   }
 
 /*
@@ -330,7 +331,7 @@ void controlarTemps(){
   }
 */
   //Enciendo y apago valvulas segun las condiciones anteriores
-  //digitalWrite(bombaPin[0],bombaEstado[0]);
+  //digitalWrite(bombaPin[1],bombaEstado[1]);
   digitalWrite(bombaPin[0],bombaEstado[0]);
 }
 
@@ -374,3 +375,4 @@ void sensarTemperatura(){
     }
   }
 }
+
