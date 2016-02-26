@@ -1,8 +1,10 @@
 #include <Arduino.h>
 /*
 ACERCA
-Este control de cmdTemperatura para fue creado para controlar la fermentacion de la cerveza. El objetivo de este es que la cmdTemperatura que es tomada por los sensores dentro del fermentador (sensoresDeTemperaturax),
-no supere la especificada via serial que es guardadda en fermNumx. El valor de cmdTemperatura para cada fermentador(fermNumx) es eviado mediante una app python via puerto serie y estos son controlados directamente por arduino,
+Este control de cmdTemperatura para fue creado para controlar la fermentacion de la cerveza. El objetivo de este es que la cmdTemperatura que es 
+tomada por los sensores dentro del fermentador (sensoresDeTemperaturax),
+no supere la especificada via serial que es guardadda en fermNumx. El valor de cmdTemperatura para cada fermentador(fermNumx) es 
+eviado mediante una app python via puerto serie y estos son controlados directamente por arduino,
 ademas se agrego la posibilidad de consultar la cmdTemperatura de los sensores dentro de los fermentadores.
 
 
@@ -22,47 +24,33 @@ g1 ("g" hace un get de la cmdTemperatura a sensoresDeTemperatura1, el cual estar
 #include <DallasTemperature.h>
 #include <LiquidCrystal.h>
 
-
-
-//Defino pin para busqueda de dispositivos OneWire
-OneWire  ds(9);  
-
 // Defino pines para LCD
 LiquidCrystal lcd(12,11,5,4,3,2);
 
 // Defino pin para sensores DS
 #define ONE_WIRE_BUS 9
-
 // Cantidad de sensores conectados
-#define NumberOfDevices 2 
+#define cantidadSensores 1 
 // Device Addresses are 8-element byte arrays
-byte allAddress [NumberOfDevices][8];
+byte sensoresTemp [cantidadSensores][8];
 // Declare variable to store number of One Wire devices that are actually discovered.
-byte totalDevices; 
-
-
-
+byte totalSensores; 
 // Defino Precision de lectura
 #define TEMPERATURE_PRECISION 9
-
 // Instacio OneWire para todos los dispositivos en el bus
 OneWire OneWire(ONE_WIRE_BUS);
-
-
 // Paso como referencia el bus a la lib Dallas
 DallasTemperature sensors(&OneWire);
 
 // Defino direcciones de acceso a sensores
-DeviceAddress sensoresTemp [2][8] = {};
-DeviceAddress sensor1 = { 0x28, 0xFF, 0x34, 0x71, 0x68, 0x14, 0x04, 0xC2 }; //Sensor1
-DeviceAddress sensor0 = { 0x28, 0xFF, 0xB5, 0x80, 0x63, 0x14, 0x03, 0x78 }; //sensor1
+DeviceAddress sensor0 = { 0x28, 0xFF, 0x34, 0x71, 0x68, 0x14, 0x04, 0xC2 }; //Sensor1
+//DeviceAddress sensor0 = { 0x28, 0xFF, 0xB5, 0x80, 0x63, 0x14, 0x03, 0x78 }; //sensor1
 //DeviceAddress sensor0   = {0x28, 0xFF, 0x4A, 0xE4, 0x6D, 0x14, 0x04, 0x58}; //LEO
 
-//////////////////////////////////////////////////////////////// VARIABLES GLOBALES//////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////// VARIABLES GLOBALES//////////////////////////////////////////////////////////////////////////
 
 //Variables de lectura para Temperatura de sensores 1 a 5
-float temperatura[6]={};
-
+float temperatura[cantidadSensores]={};
 //Variables para almacenar temperaturas fijadas para fermentadores 1 y 2
 int temperaturaSeteada[6] = {99,99,99,99,99,99};
 
@@ -79,12 +67,12 @@ boolean stringComplete = false;  // Define si se completó la cadena
 int bombaPin [] = {10,11};
 
 // TODO // Para uso con array dinamico parametrizando cantidad de bombas
-int bombasCantidad = 2;
+#define bombasCantidad 2
 //int* bombaPin = 0;
 
 //Estados de pines de relees para electro valvulas y bomba
-//int bombaEstado [] = {HIGH,HIGH};
 int bombaEstado [] = {LOW,LOW};
+//int bombaEstado [bombasCantidad] = {LOW,LOW};
 
 //Variables para control de encendido de bombas, espera tiempo minimo de espera para encendido(5 minutos)
 //long intervaloEncendidoBombas = 500000;
@@ -111,9 +99,9 @@ void setup(void){
   // Buscar dispositivos 1-wire
   sensors.begin();
   // Guarda todas las mac de los sensores enallAddress array 
-  totalDevices = discoverOneWireDevices();         
-  for (byte i=0; i < totalDevices; i++) 
-    sensors.setResolution(allAddress[i], 10);
+  totalSensores = discoverOneWireDevices();         
+  for (byte i=0; i < totalSensores; i++) 
+    sensors.setResolution(sensoresTemp[i], 10);
 
   // Inicializo LCD
   lcd.begin(16,2);
@@ -122,20 +110,18 @@ void setup(void){
   sensors.begin();
 
   //Defino pines a utilizar como salida para electro valvulas y bomba
-  for (int pin=10; pin > pin + bombasCantidad; pin++){
-  pinMode(bombaPin[pin],OUTPUT);
-  }
+  //for (int pin=10; pin > pin + bombasCantidad; pin++){
+  //pinMode(bombaPin[pin],OUTPUT);
+  //}
+  pinMode(bombaPin[0],OUTPUT);
+  pinMode(bombaPin[1],OUTPUT);
   Serial.println("Pines seteados en modo salida");
-
-  //Seteo de resolucion para sensores
-  sensors.setResolution(sensor0, TEMPERATURE_PRECISION);
-  sensors.setResolution(sensor1, TEMPERATURE_PRECISION);
 
 }
 
 void loop(void){
 
-/////////////////////////////////////////////////////////////////////////////// VARIABLES LOCALES DE LOOP()////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////// VARIABLES LOCALES DE LOOP()////////////////////////////////////////////////////////////////////////////
   // Realiza la lectura de temperatura de todos los sensores cada 2 mins y son guardadas en array temperatura
   sensarTemperatura();
 
@@ -170,12 +156,11 @@ void serialEvent() {
       stringComplete = true;
       // Quito el caracter de nueva linea (\n) de inputString
       inputString.trim();
-
-    
     }
     else{
       // Agrego la cadena a inputString:
       inputString += inChar;
+      delay(10);
     }
   }
 }
@@ -191,11 +176,11 @@ void parsearComando(){
           tempStr += inputString[2];
           tempStr += inputString[3];
           cmdTemperatura = tempStr.toInt();
-          Serial.println("Modo seteo activado");
+          //Serial.println("Modo seteo activado");
           setearTemperatura(cmdFermentadorNumero,cmdTemperatura);
         break;
       case 'g':
-          Serial.println("Modo consulta activado");
+          //Serial.println("Modo consulta activado");
           cmdTemperatura=getTemp(cmdFermentadorNumero);
           Serial.println(cmdTemperatura);
         break;
@@ -203,7 +188,7 @@ void parsearComando(){
           Serial.println(getSetTemp(cmdFermentadorNumero));
         break;
       default:
-        Serial.println("Ingrese un comando valido");
+        Serial.println("err");
   }
 }
 
@@ -218,7 +203,7 @@ void imprimirChars(){
 
 //Funcion para recuperar cmdTemperatura de fermentador en variable de ultima consulta
 int getTemp (int numeroFermentador){
-    int result;
+    float result;
     result = temperatura[numeroFermentador];
 
     return result;
@@ -249,30 +234,35 @@ void imprimirTemperatura(DeviceAddress deviceAddress){
 
 long imprimirTemperaturaLcd(DeviceAddress deviceAddress){
   float tempC = sensors.getTempC(deviceAddress);
+  
   return(tempC);
 }
 
 // Funcion para recuperar temperaturas sobre sensor
 long recuperarTemperatura(DeviceAddress deviceAddress){
     float tempC = sensors.getTempC(deviceAddress);
+    
     return tempC;
 }
 
 // Funcion para busqueda de dispositivos OneWire
 byte discoverOneWireDevices() {
-  byte j=0;                                        // search for one wire devices and
-                                                   // copy to device address arrays.
-  while ((j < NumberOfDevices) && (OneWire.search(allAddress[j]))) {        
+  byte j=0;                                        
+  //Busca sensores y agrega la mac al array
+  while ((j < cantidadSensores) && (OneWire.search(sensoresTemp[j]))) {        
     j++;
   }
   for (byte i=0; i < j; i++) {
-    Serial.print("Device ");
+    Serial.print("Sensor ");
     Serial.print(i);  
     Serial.print(": ");                          
-    printAddress(allAddress[i]);                  // print address from each device address arry.
+    // Imprime macs de sensores encontrados 
+    printAddress(sensoresTemp[i]);                  
   }
   Serial.print("\r\n");
-  return j                      ;                 // return total number of devices found.
+  
+  // Devuelve el total de dispositivos encontrados
+  return j;                 
 }
 
 // Imprime direcciones de sensores descubiertos
@@ -296,7 +286,7 @@ void imprimirCmdIn(){
   // Imprime la cadena cuando llega una nueva linea:
   if (stringComplete) {
 
-    Serial.println(inputString);
+    //Serial.println(inputString);
 
     // Parseo de comandos entrantes
     parsearComando();
@@ -305,7 +295,6 @@ void imprimirCmdIn(){
     memset(inputChar, 0, sizeof(inputChar));
     inputString = "";
     stringComplete = false;
-
   }
 }
 
@@ -313,16 +302,19 @@ void imprimirCmdIn(){
 void controlarTemps(){
   long intervaloEncendidoActual = millis();
 
-  //Cuando la cmdTemperatura del fermentador supere la seteada en temperaturaSeteada[x] durante el intervalo seteado en (intervaloEncendidoBombas) se activa las bomba
+  //Cuando la cmdTemperatura del fermentador supere la seteada en temperaturaSeteada[x]
+  // durante el intervalo seteado en (intervaloEncendidoBombas) se activa las bomba
   if (temperatura[0]> temperaturaSeteada[0] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_0 > intervaloEncendidoBombas){
-    //bombaEstado[0]=LOW;
-    bombaEstado[0]=HIGH;
+    
+     bombaEstado[0]=HIGH;
+     
+    
     intervaloEncendidoPrevBomba_0 = millis();
-    Serial.println("Bomba activada en fermentador 0");
+    Serial.print("Bomba activada en fermentador 0 con pin ");
+    Serial.println(bombaPin[0]);
 
   }
   else if (temperatura[0]<= temperaturaSeteada[0]){
-    //bombaEstado[0]=HIGH;
     bombaEstado[0]=LOW;
   }
 
@@ -338,8 +330,8 @@ void controlarTemps(){
   }
 */
   //Enciendo y apago valvulas segun las condiciones anteriores
+  //digitalWrite(bombaPin[0],bombaEstado[0]);
   digitalWrite(bombaPin[0],bombaEstado[0]);
-  digitalWrite(bombaPin[1],bombaEstado[0]);
 }
 
 void escrituraLCD(){
@@ -377,8 +369,8 @@ void sensarTemperatura(){
   if (intervaloTomaTempActual - tempIntervaloSensadoPrev > tempIntervaloSensado){
   //Recupero cmdTemperatura de sensor DS, convierto la temperatura de Farenheit a Celcius y paso valor a sensor 1
     sensors.requestTemperatures();
-    for (int i = 0; i < NumberOfDevices; ++i){
-      temperatura[i] = recuperarTemperatura(allAddress[i]);
+    for (int i = 0; i < cantidadSensores; ++i){
+      temperatura[i] = recuperarTemperatura(sensoresTemp[i]);
     }
   }
 }
