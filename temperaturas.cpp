@@ -1,6 +1,6 @@
 #include <temperaturas.h>
 
-
+//############################# TODO Pasar como parametro las variables definidas abajo cuando llamo a la clase 
 #define cantidadSensores 2
 
 extern byte totalSensores;

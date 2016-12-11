@@ -44,8 +44,11 @@ String restart = "true";
 ////////////////////////////////////////////// INICIO PARAMETROS PARA SENSORES DS ////////////////////////////////////////////////////
 // Defino pin para sensores DS
 #define ONE_WIRE_BUS 9
-// Cantidad de sensores conectados
+
+// Defino Cantidad de sensores conectados para ajustar todos los arrasy de bombas, sensores y 
+//temps a la cantidad de estos
 #define cantidadSensores 2
+
 // Defino Precision de lectura
 #define TEMPERATURE_PRECISION 10
 
@@ -169,20 +172,13 @@ void loop(void){
   // Realiza la lectura de temperatura de todos los sensores cada 2 mins y son guardadas en array temperatura
   sensarTemperatura();
   
-  // Empiezo el control de comparando temperaturas seteadas en fermentadores y temperaturas en sensores
+  //############################# TODO Pasar como parametro las variables necesarias cuando llamo a la clase
+  // Realizo el control de comparando temperaturas seteadas en fermentadores y temperaturas actuales de sensores
   temperaturas.controlarTemps();
  
   // Muestro datos por LCD
   escrituraLCD();
 
-  /*
-  delay(1000);
-  Serial.print("Temperatura de Sensor 0: ");
-  Serial.println(temperatura[0]);
-  Serial.print("Temperatura de Sensor 1: ");
-  Serial.println(temperatura[1]);
-  Serial.println("");
-  */
 }
 
 /////////////////////////////////////////////////FUNCIONES////////////////////////////////////////////////////////////////
@@ -242,29 +238,7 @@ void printAddress(DeviceAddress addr) {
   Serial.print("\r\n");
 } 
 
-/*
-// Funcion para el control de temperatura
-void controlarTemps(){
-  long intervaloEncendidoActual = millis();
-  //Cuando la cmdTemperatura del fermentador supere la seteada en temperaturaSeteada[x]
-  // durante el intervalo seteado en (intervaloEncendidoBombas) se activa las bomba
-  for (byte i=0; i < totalSensores; i++) {
-    if (temperatura[i]> temperaturaSeteada[i] && intervaloEncendidoActual - intervaloEncendidoPrevBomba[i] > intervaloEncendidoBombas){
-      
-       bombaEstado[i]=HIGH;
-       
-      // Guardo el momento en que se encendió por ultima vez la bomba para realizar el calculo de limite de encendido cada x minutos
-      intervaloEncendidoPrevBomba[i] = millis();
-    }
-    // Si la temperatura es menor o igual a la seteada para el fermentador, la bomba se apaga
-    else if (temperatura[i]<= temperaturaSeteada[i]){
-      bombaEstado[i]=LOW;
-    }
 
-    digitalWrite(bombaPin[i],bombaEstado[i]);
-  }
-}
-*/
 
 // Funcion para escritura en LCD
 void escrituraLCD(){
