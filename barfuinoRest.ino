@@ -11,14 +11,11 @@ ARDUINO MEGA
 50,51,52 (SPI/ICSP)
 53 (SS)
 
-
-
-rest.function("getSensorTemp",getSensorTemp);
-rest.function("setFermentadorTemp",setFermentadorTemp);
-rest.function("getFermentadorTemp",getFermentadorTemp);
-
+REFERENCIAS PARA CONSULTAS Y SETEOS VIA WEB
+// Consulta de variable de reinicio para setear nuevamente configuraciones
+http://192.168.0.108/status
 // Consulta de temperatura a sensor
-// http://192.168.0.108/getSensorTemp?params=X
+// http://192.168.0.108/getSensorTemp?params=X (Donde X es el numero de sensor, el cual es equivalente al numero de fermentador)
 
 // Seteo de temperaturas
 http://192.168.0.108/setFermentadorTemp?params=F,T (Donde F = Numero de fermentador y T = Temperatura maxima)
@@ -37,6 +34,8 @@ http://192.168.0.108/getFermentadorTemp?params=X
 
 // Defino pines para LCD
 LiquidCrystal lcd(12,11,5,4,3,2);
+
+String restart = "true";
 
 ////////////////////////////////////////////// INICIO PARAMETROS PARA SENSORES DS ////////////////////////////////////////////////////
 // Defino pin para sensores DS
@@ -57,9 +56,9 @@ OneWire OneWire(ONE_WIRE_BUS);
 
 // Paso como referencia el bus a la lib Dallas
 DallasTemperature sensors(&OneWire);
-////////////////////////////////////////////// FIN PARAMETROS PARA SENSORES DS ////////////////////////////////////////////////////
+////////////////////////////////////////////// FIN PARAMETROS PARA SENSORES DS /////////////////////////////////////////////////
 
-////////////////////////////////////////////// INICIO PARAMETROS RED Y API REST ////////////////////////////////////////////////////
+////////////////////////////////////////////// INICIO PARAMETROS RED Y API REST ////////////////////////////////////////////////
 // DEFINO MAC DE ETHERNET
 byte mac[] = { 0x90, 0xA2, 0xDA, 0x0E, 0xFE, 0x40 };
 
@@ -74,7 +73,7 @@ aREST rest = aREST();
 
 ////////////////////////////////////////////// FIN PARAMETROS RED Y API REST ////////////////////////////////////////////////////
 
-///////////////////////////////////////////////////// VARIABLES GLOBALES//////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////// VARIABLES GLOBALES/////////////////////////////////////////////////////////
 
 //Variables de lectura para Temperatura de sensores
 float temperatura[cantidadSensores];
@@ -88,13 +87,12 @@ int bombaPin[cantidadSensores] = {14,15};
 //Estados de pines de relees para electro bombas
 int bombaEstado[cantidadSensores] = {LOW,LOW};
 
-//Variables para control de encendido de bombas, espera tiempo minimo de espera para encendido(5 minutos)
+//Variables para control de encendido de bombas, espera tiempo minimo de espera para encendido 500000 milisecs (5 minutos)
 //long intervaloEncendidoBombas = 500000;
 long intervaloEncendidoBombas = 500;
 
 ///Almaceno timestamp de encendido anterior
 long intervaloEncendidoPrevBomba[cantidadSensores];
-//long intervaloEncendidoPrevBomba_1 = 0;
 
 //Intervalo minimo para tomar cmdTemperatura nuevamente(30 segundos)
 long tempIntervaloSensado = 30000;
@@ -114,8 +112,8 @@ void setup(void){
   // Busca y guarda todas las mac de los sensores en allAddress array 
   totalSensores = discoverOneWireDevices();         
   
-  // Seteo resolucion en sensores, temperatura por default de fermentadores, declaro pines en modo salida y seteo el estado de los 
-  //mismos al inicio del arduino
+  // Seteo resolucion en sensores, temperatura por default de fermentadores, declaro pines en modo salida, seteo el estado de los 
+  //mismos y finalmente seteo los intervalos de encendo de cada bomba a 0 al inicio del arduino
   for (byte i=0; i < totalSensores; i++) {
     sensors.setResolution(sensoresTemp[i], 10);
     temperaturaSeteada[i] = 99;
@@ -123,17 +121,8 @@ void setup(void){
     Serial.println("Pines seteados en modo salida");
     bombaEstado[i] = LOW;
     intervaloEncendidoPrevBomba[i] = 0;
-
-    }
-  /*
-  // Seteo todos los fermentadores en 99 para evitar el arranque de bombas
-  for (byte i=0; i < totalSensores; i++)
-    temperaturaSeteada[i] = 99;
-
-  // Inicio los pines de las bombas en apagado para evitar que arranquen durante el inicio
-  for (byte i=0; i < totalSensores; i++)
-    bombaEstado[i] = LOW;
-  */
+  }
+  
   // Inicializo LCD
   lcd.begin(16,2);
 
@@ -142,10 +131,14 @@ void setup(void){
   rest.set_id("001");
   rest.set_name("Barfuino");
 
-  //rest.variable(esta,&temperaturas[i]);
+  // Defino funciones para consultar temperatura de sensores, setear temperatura de fermentadores
+  // y consultar temperatura seteada en fermentador
   rest.function("getSensorTemp",getSensorTemp);
   rest.function("setFermentadorTemp",setFermentadorTemp);
   rest.function("getFermentadorTemp",getFermentadorTemp);
+
+  // Defino consulta para saber si el arduino se reinició y debo setear valores nuevamente
+  rest.variable("status",&restart);
 
   // ARRANCO RED Y SERVIDOR
   if (Ethernet.begin(mac) == 0) {
@@ -166,27 +159,29 @@ void setup(void){
 void loop(void){
 
 ////////////////////////////////////////////// VARIABLES LOCALES DE LOOP()////////////////////////////////////////////////////////////////////////////
+  // Inicio de servidor web y red
   iniciarRed();
+  
   // Realiza la lectura de temperatura de todos los sensores cada 2 mins y son guardadas en array temperatura
   sensarTemperatura();
   
-  //Empiezo el control de cmdTemperatura segun temps comparando temperaturas en sensores 1 y 2 con las fijadas en fermNum1 y fermNum2
+  // Empiezo el control de comparando temperaturas seteadas en fermentadores y temperaturas en sensores
   controlarTemps();
  
   // Muestro datos por LCD
   escrituraLCD();
 
+  /*
   delay(1000);
-  
   Serial.print("Temperatura de Sensor 0: ");
   Serial.println(temperatura[0]);
   Serial.print("Temperatura de Sensor 1: ");
   Serial.println(temperatura[1]);
   Serial.println("");
+  */
 }
 
-/////////////////////////////////////////////////////////////////////FUNCIONES///////////////////////////////////////////////////////////////////////
-
+/////////////////////////////////////////////////FUNCIONES////////////////////////////////////////////////////////////////
 
 // Funcion para imprimir temperaturas
 void imprimirTemperatura(DeviceAddress deviceAddress){
@@ -207,10 +202,10 @@ long recuperarTemperatura(DeviceAddress deviceAddress){
     return tempC;
 }
 
-// Funcion para busqueda de dispositivos OneWire
+// Funcion para busqueda de dispositivos OneWire para sensores de temperatura
 byte discoverOneWireDevices() {
   byte j=0;                                        
-  //Busca sensores y agrega la mac al array
+//Busca sensores y agrega la mac al array
   while ((j < cantidadSensores) && (OneWire.search(sensoresTemp[j]))) {        
     j++;
   }
@@ -223,7 +218,7 @@ byte discoverOneWireDevices() {
   }
   Serial.print("\r\n");
   
-  // Devuelve el total de dispositivos encontrados
+// Devuelve el total de dispositivos encontrados
   return j;                 
 }
 
@@ -247,19 +242,15 @@ void printAddress(DeviceAddress addr) {
 // Funcion para el control de temperatura
 void controlarTemps(){
   long intervaloEncendidoActual = millis();
-
+  //Cuando la cmdTemperatura del fermentador supere la seteada en temperaturaSeteada[x]
+  // durante el intervalo seteado en (intervaloEncendidoBombas) se activa las bomba
   for (byte i=0; i < totalSensores; i++) {
-    //Cuando la cmdTemperatura del fermentador supere la seteada en temperaturaSeteada[x]
-    // durante el intervalo seteado en (intervaloEncendidoBombas) se activa las bomba
     if (temperatura[i]> temperaturaSeteada[i] && intervaloEncendidoActual - intervaloEncendidoPrevBomba[i] > intervaloEncendidoBombas){
       
        bombaEstado[i]=HIGH;
        
       // Guardo el momento en que se encendió por ultima vez la bomba para realizar el calculo de limite de encendido cada x minutos
       intervaloEncendidoPrevBomba[i] = millis();
-      //Serial.print("Bomba activada en fermentador i con pin ");
-      //Serial.println(bombaPin[i]);
-
     }
     // Si la temperatura es menor o igual a la seteada para el fermentador, la bomba se apaga
     else if (temperatura[i]<= temperaturaSeteada[i]){
@@ -270,28 +261,31 @@ void controlarTemps(){
   }
 }
 
+// Funcion para escritura en LCD
 void escrituraLCD(){
   unsigned long intervaloLCDPrintActual = millis();
 
-  if (intervaloLCDPrintActual - intervaloLCDPrintPrev > intervaloLCDPrint){
-    lcd.setCursor(5,0);
-    lcd.print("Fermentador: ");
-    lcd.print(temperatura[0]);
-    lcd.print("C");
+  for (byte i=0; i < totalSensores; i++) {
+    if (intervaloLCDPrintActual - intervaloLCDPrintPrev > intervaloLCDPrint){
+      lcd.setCursor(5,0);
+      lcd.print("Fermentador: ");
+      lcd.print(temperatura[i]);
+      lcd.print("C");
 
-    lcd.setCursor(14,3);
-    lcd.print("Temperatura seteada: ");
-    lcd.print(temperaturaSeteada[0]);
-    lcd.print("C");
-    intervaloLCDPrintPrev = millis();
+      lcd.setCursor(14,3);
+      lcd.print("Temperatura seteada: ");
+      lcd.print(temperaturaSeteada[i]);
+      lcd.print("C");
+      intervaloLCDPrintPrev = millis();
 
-    }
+      }
 
-  unsigned long intervaloLCDScrollActual = millis();
-  if (intervaloLCDScrollActual - intervaloLCDScrollPrev > intervaloLCDPrint){
-    for (int scrollCounter = 0; scrollCounter < 31; scrollCounter++){
-      lcd.scrollDisplayRight();
-      intervaloLCDScrollPrev = millis();
+    unsigned long intervaloLCDScrollActual = millis();
+    if (intervaloLCDScrollActual - intervaloLCDScrollPrev > intervaloLCDPrint){
+      for (int scrollCounter = 0; scrollCounter < 31; scrollCounter++){
+        lcd.scrollDisplayRight();
+        intervaloLCDScrollPrev = millis();
+      }
     }
   }
 }
@@ -311,7 +305,7 @@ void sensarTemperatura(){
   }
 }
 
-// Funcion para recuperar temperatura de sensor desde api rest
+// Funcion para recuperar temperatura de sensor desde variable de almacenado de temp para api rest
 int getSensorTemp(String sensor){
   
   int sensorId = sensor.toInt();
@@ -340,14 +334,12 @@ int setFermentadorTemp(String command){
   return temperaturaSeteada[ferNum];
 }
 
-
+// Funcion para consulta de temperatura seteada
 int getFermentadorTemp(String command){
   int ferNum = command.toInt();
 
   return temperaturaSeteada[ferNum];
 }
-
-
 
 // Funcion de inicio de red
 void iniciarRed(){
