@@ -93,8 +93,8 @@ int bombaEstado[cantidadSensores] = {LOW,LOW};
 long intervaloEncendidoBombas = 500;
 
 ///Almaceno timestamp de encendido anterior
-long intervaloEncendidoPrevBomba_0 = 0;
-long intervaloEncendidoPrevBomba_1 = 0;
+long intervaloEncendidoPrevBomba[cantidadSensores];
+//long intervaloEncendidoPrevBomba_1 = 0;
 
 //Intervalo minimo para tomar cmdTemperatura nuevamente(30 segundos)
 long tempIntervaloSensado = 30000;
@@ -122,6 +122,7 @@ void setup(void){
     pinMode(bombaPin[i],OUTPUT);
     Serial.println("Pines seteados en modo salida");
     bombaEstado[i] = LOW;
+    intervaloEncendidoPrevBomba[i] = 0;
 
     }
   /*
@@ -247,23 +248,26 @@ void printAddress(DeviceAddress addr) {
 void controlarTemps(){
   long intervaloEncendidoActual = millis();
 
-  //Cuando la cmdTemperatura del fermentador supere la seteada en temperaturaSeteada[x]
-  // durante el intervalo seteado en (intervaloEncendidoBombas) se activa las bomba
-  if (temperatura[0]> temperaturaSeteada[0] && intervaloEncendidoActual - intervaloEncendidoPrevBomba_0 > intervaloEncendidoBombas){
-    
-     bombaEstado[0]=LOW;
-     
-    
-    intervaloEncendidoPrevBomba_0 = millis();
-    //Serial.print("Bomba activada en fermentador 0 con pin ");
-    //Serial.println(bombaPin[0]);
+  for (byte i=0; i < totalSensores; i++) {
+    //Cuando la cmdTemperatura del fermentador supere la seteada en temperaturaSeteada[x]
+    // durante el intervalo seteado en (intervaloEncendidoBombas) se activa las bomba
+    if (temperatura[i]> temperaturaSeteada[i] && intervaloEncendidoActual - intervaloEncendidoPrevBomba[i] > intervaloEncendidoBombas){
+      
+       bombaEstado[i]=HIGH;
+       
+      // Guardo el momento en que se encendió por ultima vez la bomba para realizar el calculo de limite de encendido cada x minutos
+      intervaloEncendidoPrevBomba[i] = millis();
+      //Serial.print("Bomba activada en fermentador i con pin ");
+      //Serial.println(bombaPin[i]);
 
-  }
-  else if (temperatura[0]<= temperaturaSeteada[0]){
-    bombaEstado[0]=HIGH;
-  }
+    }
+    // Si la temperatura es menor o igual a la seteada para el fermentador, la bomba se apaga
+    else if (temperatura[i]<= temperaturaSeteada[i]){
+      bombaEstado[i]=LOW;
+    }
 
-  digitalWrite(bombaPin[0],bombaEstado[0]);
+    digitalWrite(bombaPin[i],bombaEstado[i]);
+  }
 }
 
 void escrituraLCD(){
