@@ -31,6 +31,10 @@ http://192.168.0.108/getFermentadorTemp?params=X
 #include <Ethernet.h>
 #include <aREST.h>
 #include <avr/wdt.h>
+#include <temperaturas.h>
+
+// Instancio clase de control de temperatura
+temperaturas temperaturas;
 
 // Defino pines para LCD
 LiquidCrystal lcd(12,11,5,4,3,2);
@@ -166,7 +170,7 @@ void loop(void){
   sensarTemperatura();
   
   // Empiezo el control de comparando temperaturas seteadas en fermentadores y temperaturas en sensores
-  controlarTemps();
+  temperaturas.controlarTemps();
  
   // Muestro datos por LCD
   escrituraLCD();
@@ -238,7 +242,7 @@ void printAddress(DeviceAddress addr) {
   Serial.print("\r\n");
 } 
 
-
+/*
 // Funcion para el control de temperatura
 void controlarTemps(){
   long intervaloEncendidoActual = millis();
@@ -260,6 +264,7 @@ void controlarTemps(){
     digitalWrite(bombaPin[i],bombaEstado[i]);
   }
 }
+*/
 
 // Funcion para escritura en LCD
 void escrituraLCD(){
