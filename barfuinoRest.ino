@@ -169,6 +169,7 @@ void loop(void){
   // Inicio de servidor web y red
   iniciarRed();
   
+  //############################# TODO incluir dentro de clase temperaturas
   // Realiza la lectura de temperatura de todos los sensores cada 2 mins y son guardadas en array temperatura
   sensarTemperatura();
   

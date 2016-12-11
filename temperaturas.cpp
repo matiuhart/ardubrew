@@ -13,8 +13,6 @@ extern int bombaPin[cantidadSensores];
 
 extern int temperaturaSeteada[cantidadSensores];
 
-extern long intervaloEncendidoActual;
-
 extern long intervaloEncendidoPrevBomba[cantidadSensores];
 
 extern long intervaloEncendidoBombas[cantidadSensores];
